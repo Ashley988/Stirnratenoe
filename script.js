@@ -62,21 +62,14 @@ let wordsCurrentRound = [];
 let remainingTime = 0;
 let scores = [];
 let isGameRunning = false;
-let neutralGamma = null; // Für Kipp-Ausgangsposition im Querformat
-let canTriggerKipp = true; // Für Debounce, damit kein Doppelkipp
-let landscapeSign = 1; // Für Landscape-Richtungs-Erkennung
-let motionPermissionGranted = false;
 
-// =================== LANDSCAPE-RICHTUNG ERKENNEN ===================
-function detectLandscapeSign() {
-    if (window.orientation === 90) {
-        landscapeSign = 1;   // Landscape-Left
-    } else if (window.orientation === -90) {
-        landscapeSign = -1;  // Landscape-Right
-    } else {
-        landscapeSign = 1;   // Fallback
-    }
-}
+// === NEU: Für universelle Kippfunktion ===
+let neutralBeta = null;
+let neutralGamma = null;
+let activeAxis = "beta"; // "beta" oder "gamma", wird automatisch erkannt
+let canTriggerKipp = true;
+const THRESHOLD = 55;
+const NEUTRAL_RANGE = 20;
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
@@ -224,7 +217,7 @@ function reallyStartRound() {
 
 // =================== RUNDE BEGINNT, TIMER LÄUFT ===================
 function beginGameplay() {
-    setNeutralGamma(); // Neutralstellung exakt bei Rundenstart setzen!
+    setNeutralAxis(); // Universell, erkennt die richtige Achse
     canTriggerKipp = true;
 
     if (!gameData || !gameData.roundTime) {
@@ -248,12 +241,13 @@ function beginGameplay() {
     }, 1000);
 }
 
-// ========== NEUTRALSTELLUNG (GAMMA) SPEICHERN (bei Wortstart) + LandscapeSign setzen ==========
-function setNeutralGamma() {
-    neutralGamma = null;
-    detectLandscapeSign();
+// ===== Universelle Kipp-Neutralstellung setzen =====
+function setNeutralAxis() {
     window.addEventListener('deviceorientation', function once(event) {
+        neutralBeta = event.beta;
         neutralGamma = event.gamma;
+        activeAxis = "beta"; // Standard, automatische Erkennung folgt im Listener
+        canTriggerKipp = true;
         window.removeEventListener('deviceorientation', once, true);
     }, true);
 }
@@ -282,29 +276,34 @@ function updateTimerDisplay() {
     document.getElementById('timer-display').textContent = `Verbleibende Zeit: ${remainingTime}s`;
 }
 
-// =================== KIPPSTEUERUNG (DEVICE ORIENTATION, GAMMA!) ===================
-const THRESHOLD = 55;
-const NEUTRAL_RANGE = 20;
-
+// =================== KIPPSTEUERUNG (UNIVERSAL!) ===================
 window.addEventListener('deviceorientation', function(event) {
-    if (!isGameRunning || neutralGamma === null) return;
+    if (!isGameRunning || neutralBeta === null || neutralGamma === null) return;
 
-    let delta = (event.gamma - neutralGamma) * landscapeSign;
+    let deltaBeta = event.beta - neutralBeta;
+    let deltaGamma = event.gamma - neutralGamma;
 
-    // In Neutralzone: Debounce zurücksetzen
+    // Achse wählen, die sich beim Kippen am meisten verändert!
+    if (Math.abs(deltaBeta) > Math.abs(deltaGamma)) {
+        activeAxis = "beta";
+    } else {
+        activeAxis = "gamma";
+    }
+    let delta = (activeAxis === "beta") ? deltaBeta : deltaGamma;
+
+    // Debounce: Nur wenn wirklich wieder neutral gehalten
     if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
         canTriggerKipp = true;
         return;
     }
 
-    // ECHTES Debounce: Nur 1 Wort pro Kipp, egal wie lange gekippt!
     if (canTriggerKipp) {
         if (delta > THRESHOLD) {
             canTriggerKipp = false;
-            handleKipp(true);  // Nach unten (Boden): grün, Punkt
+            handleKipp(true);   // Nach unten (Boden): grün, Punkt
         } else if (delta < -THRESHOLD) {
             canTriggerKipp = false;
-            handleKipp(false); // Nach oben (Decke): rot, kein Punkt
+            handleKipp(false);  // Nach oben (Decke): rot, kein Punkt
         }
     }
 }, true);
