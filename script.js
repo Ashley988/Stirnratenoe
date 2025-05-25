@@ -1,12 +1,11 @@
-
 // =================== WORTLISTE NACH KATEGORIEN ===================
 const allWords = {
-    objekte: ["Lampe", "Stuhl", "Tasse", "Tisch", "Schlüssel", "Buch"],
-    berufe: ["Arzt", "Lehrer", "Bäcker", "Mechaniker", "Polizist", "Pilot"],
-    natur: ["Baum", "Blume", "Wolke", "See", "Stein", "Berg"],
-    adjektive: ["schnell", "langsam", "lustig", "klug", "schwer", "klein"],
-    verben: ["laufen", "springen", "malen", "essen", "lesen", "schlafen"]
-    // Weitere Kategorien und Wörter kannst du ergänzen!
+    objekte: ["Glas", "Becher", "Flasche", "Kissen", "Decke", "Sofa", "Fernseher", "Fernbedienung", "Uhr", "Telefon"],
+    berufe: ["Arzt", "Lehrer", "Bäcker", "Mechaniker", "Polizist", "Pilot", "Koch", "Kellner", "Friseur", "Verkäufer"],
+    natur: ["Wald", "Wiese", "Fluss", "Teich", "Meer", "Ozean", "Strand", "Küste", "Wasserfall", "Gebirge"],
+    adjektive: ["groß", "alt", "jung", "neu", "hoch", "tief", "breit", "schmal", "dick", "dünn"],
+    verben: ["gehen", "fahren", "schreiben", "sprechen", "sehen", "hören", "denken", "fühlen", "riechen", "schmecken"]
+    // Weitere Begriffe kannst du oben anreichern
 };
 
 // =================== BEREICHE REFERENZIEREN ===================
@@ -32,7 +31,8 @@ orientationHint.innerHTML = `
     <span style="color:#ffb2b2;">Kippe nach oben (Richtung Decke): <b>falsch</b> (rot)</span>
     </b>
     <br><br>
-    <small style="color:#bbb;">(Erlaube ggf. Bewegungssensoren, falls dein Handy fragt)</small>
+    <button id="enable-motion-btn" style="font-size:1em;padding:0.5em 1em;margin-top:1em;">Bewegungssensoren aktivieren</button>
+    <br><small style="color:#bbb;">(iPhone: Bitte Bewegungssensoren erlauben, sonst funktioniert die Kippsteuerung nicht!)</small>
 </div>
 `;
 document.body.appendChild(orientationHint);
@@ -64,20 +64,7 @@ let scores = [];
 let isGameRunning = false;
 let neutralBeta = null; // Für echte Kipp-Ausgangsposition
 let canTriggerKipp = true; // Für "Debounce", damit kein Doppelkipp
-
-// =================== MOTION/FREIGABE iOS ===================
-function requestMotionPermissionIfNeeded() {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-            .then(permissionState => {
-                if (permissionState !== 'granted') {
-                    alert("Bitte erlaube Zugriff auf die Bewegungssensoren in den Einstellungen.");
-                }
-            })
-            .catch(console.error);
-    }
-}
+let motionPermissionGranted = false;
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
@@ -106,7 +93,6 @@ startBtn.addEventListener('click', function () {
     resultsSection.style.display = 'none';
 
     showOrientationHintAndThen(() => {
-        requestMotionPermissionIfNeeded();
         startGameSession();
     });
 });
@@ -149,19 +135,39 @@ function showPlayerTurn() {
     }
 }
 
-// =================== HINWEIS: QUERFORMAT BIS ERKANNT ===================
+// =================== HINWEIS: QUERFORMAT BIS ERKANNT + iOS BUTTON ===================
 function showOrientationHintAndThen(callback) {
     orientationHint.style.display = "flex";
+    // iOS Bewegungssensoren-Freigabe auf Klick
+    const enableBtn = document.getElementById('enable-motion-btn');
+    if (enableBtn) {
+        enableBtn.onclick = function() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(result => {
+                    if (result === 'granted') {
+                        enableBtn.disabled = true;
+                        enableBtn.innerText = "Bewegungssensoren aktiviert!";
+                        motionPermissionGranted = true;
+                    } else {
+                        alert("Bitte erlaube die Bewegungssensoren.");
+                    }
+                });
+            } else {
+                enableBtn.disabled = true;
+                enableBtn.innerText = "Bewegungssensoren nicht nötig";
+                motionPermissionGranted = true;
+            }
+        }
+    }
 
     function checkLandscapeAndContinue() {
         let isLandscape = false;
-        if (window.matchMedia("(orientation: landscape)").matches) {
-            isLandscape = true;
-        }
-        if (typeof window.orientation !== "undefined") {
+        if (window.matchMedia("(orientation: landscape)").matches) isLandscape = true;
+        if (typeof window.orientation !== "undefined")
             isLandscape = (window.orientation === 90 || window.orientation === -90);
-        }
-        if (isLandscape) {
+
+        // Weiter nur, wenn Bewegungsfreigabe geklappt hat (iOS!)
+        if (isLandscape && (motionPermissionGranted || typeof DeviceOrientationEvent.requestPermission !== 'function')) {
             orientationHint.style.display = "none";
             window.removeEventListener('orientationchange', checkLandscapeAndContinue);
             window.removeEventListener('resize', checkLandscapeAndContinue);
@@ -384,3 +390,4 @@ restartBtn.addEventListener('click', function () {
     resultsSection.style.display = 'none';
     renderNameInputs();
 });
+
