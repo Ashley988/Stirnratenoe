@@ -138,46 +138,52 @@ function showPlayerTurn() {
 // =================== HINWEIS: QUERFORMAT BIS ERKANNT + iOS BUTTON ===================
 function showOrientationHintAndThen(callback) {
     orientationHint.style.display = "flex";
-    // iOS Bewegungssensoren-Freigabe auf Klick
+    let permissionOk = false;
+
+    // Button-Handler: iOS-User muss explizit klicken
     const enableBtn = document.getElementById('enable-motion-btn');
     if (enableBtn) {
+        enableBtn.disabled = false;
+        enableBtn.innerText = "Bewegungssensoren aktivieren";
         enableBtn.onclick = function() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission().then(result => {
                     if (result === 'granted') {
+                        permissionOk = true;
                         enableBtn.disabled = true;
                         enableBtn.innerText = "Bewegungssensoren aktiviert!";
-                        motionPermissionGranted = true;
+                        proceedIfReady();
                     } else {
                         alert("Bitte erlaube die Bewegungssensoren.");
                     }
                 });
             } else {
+                permissionOk = true;
                 enableBtn.disabled = true;
                 enableBtn.innerText = "Bewegungssensoren nicht nötig";
-                motionPermissionGranted = true;
+                proceedIfReady();
             }
-        }
+        };
+    } else {
+        permissionOk = true;
     }
 
-    function checkLandscapeAndContinue() {
+    function proceedIfReady() {
         let isLandscape = false;
         if (window.matchMedia("(orientation: landscape)").matches) isLandscape = true;
         if (typeof window.orientation !== "undefined")
             isLandscape = (window.orientation === 90 || window.orientation === -90);
-
-        // Weiter nur, wenn Bewegungsfreigabe geklappt hat (iOS!)
-        if (isLandscape && (motionPermissionGranted || typeof DeviceOrientationEvent.requestPermission !== 'function')) {
+        if (isLandscape && permissionOk) {
             orientationHint.style.display = "none";
-            window.removeEventListener('orientationchange', checkLandscapeAndContinue);
-            window.removeEventListener('resize', checkLandscapeAndContinue);
+            window.removeEventListener('orientationchange', proceedIfReady);
+            window.removeEventListener('resize', proceedIfReady);
             callback();
         }
     }
 
-    window.addEventListener('orientationchange', checkLandscapeAndContinue);
-    window.addEventListener('resize', checkLandscapeAndContinue);
-    checkLandscapeAndContinue();
+    window.addEventListener('orientationchange', proceedIfReady);
+    window.addEventListener('resize', proceedIfReady);
+    proceedIfReady();
 }
 
 // =================== COUNTDOWN & START DER RUNDE ===================
@@ -193,14 +199,6 @@ function reallyStartRound() {
     countdownDiv.textContent = count;
     document.getElementById('word-display').style.display = "none";
 
-    // Neutrale Kipp-Ausgangsposition beim Start der Runde merken
-    neutralBeta = null;
-    window.addEventListener('deviceorientation', captureNeutralBeta, { once: true });
-    function captureNeutralBeta(event) {
-        neutralBeta = event.beta;
-    }
-    canTriggerKipp = true; // Für jede Runde neu erlauben
-
     const countdown = setInterval(() => {
         count--;
         if (count > 0) {
@@ -215,6 +213,15 @@ function reallyStartRound() {
 
 // =================== RUNDE BEGINNT, TIMER LÄUFT ===================
 function beginGameplay() {
+    // Exakte Neutralstellung beim Start der Runde setzen
+    neutralBeta = null;
+    window.addEventListener('deviceorientation', function setNeutral(event) {
+        neutralBeta = event.beta;
+        window.removeEventListener('deviceorientation', setNeutral, true);
+    }, true);
+
+    canTriggerKipp = true;
+
     if (!gameData || !gameData.roundTime) {
         alert("Fehler: Spieldaten fehlen. Bitte Spiel erneut starten!");
         location.reload();
@@ -261,27 +268,26 @@ function updateTimerDisplay() {
 }
 
 // =================== KIPPSTEUERUNG (DEVICE ORIENTATION) ===================
+const THRESHOLD = 55;      // Empfohlen: 55° (testen!)
+const NEUTRAL_RANGE = 20;  // Bereich für Neutralzone
+
 window.addEventListener('deviceorientation', function(event) {
     if (!isGameRunning || neutralBeta === null) return;
     let delta = event.beta - neutralBeta;
 
-    // Schwellen für „deutlich“ kippen:
-    const THRESHOLD = 35; // wie sensibel: höher = weniger sensibel
-    const NEUTRAL_RANGE = 20; // wie breit die Neutralzone ist
-
-    // Prüfen, ob noch in Neutralzone
+    // Wenn Gerät wieder in Neutralzone, Freigabe für nächstes Kippen
     if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
-        canTriggerKipp = true; // Freigabe für nächste Wertung
+        canTriggerKipp = true;
         return;
     }
 
-    // Nur auslösen, wenn nicht mehrfach hintereinander und deutlich gekippt
+    // NUR wenn noch nicht ausgelöst
     if (canTriggerKipp) {
         if (delta > THRESHOLD) {
-            handleKipp(true);  // Nach unten gekippt (richtig)
+            handleKipp(true);   // "Nach vorne" = Boden = richtig
             canTriggerKipp = false;
         } else if (delta < -THRESHOLD) {
-            handleKipp(false); // Nach oben gekippt (falsch)
+            handleKipp(false);  // "Nach hinten" = Decke = falsch
             canTriggerKipp = false;
         }
     }
@@ -390,4 +396,3 @@ restartBtn.addEventListener('click', function () {
     resultsSection.style.display = 'none';
     renderNameInputs();
 });
-
