@@ -2,58 +2,60 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Stirnraten</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CSS einbinden -->
+    <title>Stirnraten</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ===== SETUP-BEREICH ===== -->
+    <!-- ========== SETUP-BEREICH ========== -->
     <section id="setup-section">
         <h1>Stirnraten</h1>
-        <fieldset>
-            <legend>Mitspieler</legend>
-            <label for="player-count">Anzahl Spieler:</label>
+        <label>
+            Wie viele Spieler?
             <input id="player-count" type="number" min="1" max="8" value="2">
-            <div id="player-names"></div>
-        </fieldset>
-        <fieldset>
-            <legend>Runden & Zeit</legend>
-            <label for="rounds-per-player">Runden pro Spieler:</label>
+        </label>
+        <div id="player-names"></div>
+        <label>
+            Runden pro Spieler:
             <input id="rounds-per-player" type="number" min="1" max="10" value="2">
-            <label for="round-time">Rundenzeit (Sekunden):</label>
-            <input id="round-time" type="number" min="10" max="180" value="60">
-        </fieldset>
+        </label>
+        <label>
+            Zeit pro Runde (Sekunden):
+            <input id="round-time" type="number" min="10" max="120" value="60">
+        </label>
         <fieldset id="category-select">
-            <legend>Kategorien</legend>
-            <label><input type="checkbox" value="objekte" checked> Objekte</label>
-            <label><input type="checkbox" value="berufe" checked> Berufe</label>
-            <label><input type="checkbox" value="natur" checked> Natur</label>
-            <label><input type="checkbox" value="adjektive" checked> Adjektive</label>
-            <label><input type="checkbox" value="verben" checked> Verben</label>
-            <!-- Weitere Kategorien kannst du ergänzen -->
+            <legend>Kategorien:</legend>
+            <label><input type="checkbox" value="objekte" checked>Objekte</label>
+            <label><input type="checkbox" value="berufe" checked>Berufe</label>
+            <label><input type="checkbox" value="natur" checked>Natur</label>
+            <label><input type="checkbox" value="adjektive" checked>Adjektive</label>
+            <label><input type="checkbox" value="verben" checked>Verben</label>
         </fieldset>
         <button id="start-game-btn">Spiel starten</button>
     </section>
 
-    <!-- ===== SPIEL-BEREICH ===== -->
-    <section id="game-section" style="display:none;">
-        <h2 id="current-player-display"></h2>
+    <!-- ========== SPIEL-BEREICH ========== -->
+    <section id="game-section" style="display:none; flex-direction:column; align-items:center;">
+        <div id="current-player-display"></div>
         <div id="score-display"></div>
-        <div id="timer-display"></div>
-        <div id="countdown" style="display:none;"></div>
-        <div id="word-display" style="display:none;"></div>
-        <button id="ready-btn" style="display:none;">OK (Runde starten)</button>
+        <div id="countdown" style="font-size:3em; margin: 1em; display:none;">3</div>
+        <button id="ready-btn">Bereit? (Weiter)</button>
+        <div id="timer-display" style="font-size:1.2em; margin:1em;"></div>
+        <div id="word-display" style="font-size:2em; margin:2em; display:none; min-width:4em; min-height:2em; border:2px solid #fff; border-radius:1em; padding:1em; background:#111;"></div>
     </section>
 
-    <!-- ===== AUSWERTUNGS-BEREICH ===== -->
-    <section id="results-section" style="display:none;">
-        <h2>Ergebnis</h2>
+    <!-- ========== ERGEBNIS-BEREICH ========== -->
+    <section id="results-section" style="display:none; flex-direction:column; align-items:center;">
+        <h2>Auswertung</h2>
         <div id="results-table"></div>
         <button id="restart-btn">Nochmal spielen</button>
     </section>
 
-    <!-- JavaScript einbinden (am Seitenende!) -->
+    <!-- ========== HINWEIS-OVERLAY FÜR QUERFORMAT & KIPPE ========== -->
+    <!-- Wird per JS dynamisch hinzugefügt -->
+
+    <!-- ========== JS ========== -->
     <script src="script.js"></script>
 </body>
 </html>
+
