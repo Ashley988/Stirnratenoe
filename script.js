@@ -63,11 +63,11 @@ let remainingTime = 0;
 let scores = [];
 let isGameRunning = false;
 
-// === NUR BETA (iPhone), Debounce etc. ===
+// ==== KIPPKONTROLLE ====
 let neutralBeta = null;
 let canTriggerKipp = true;
-const THRESHOLD = 100;      // Wie stark man kippen muss (Boden/Decke)
-const NEUTRAL_RANGE = 70;  // Wie tolerant ist die Neutralzone
+const THRESHOLD = 55;      // Wie stark man kippen muss (Boden/Decke)
+const NEUTRAL_RANGE = 25;  // Wie tolerant ist die Neutralzone (kannst du ggf. auf 20 zurückstellen)
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
@@ -272,25 +272,34 @@ function updateTimerDisplay() {
     document.getElementById('timer-display').textContent = `Verbleibende Zeit: ${remainingTime}s`;
 }
 
-// =================== KIPPSTEUERUNG (NUR BETA!) ===================
+// =================== KIPPSTEUERUNG ===================
+// NEU: Optimiert für eine eindeutige Reaktion, kein Mehrfach-Auslösen
 window.addEventListener('deviceorientation', function(event) {
     if (!isGameRunning || neutralBeta === null) return;
+
     let delta = event.beta - neutralBeta;
 
-    // Debounce: Nur wenn wieder zurück in die Neutralzone
-    if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
-        canTriggerKipp = true;
+    // Kippsperre: erst wieder auslösbar, wenn zurück in Neutralbereich
+    if (canTriggerKipp === false) {
+        if (Math.abs(delta) < NEUTRAL_RANGE) {
+            canTriggerKipp = true;
+        }
         return;
     }
 
-    if (canTriggerKipp) {
-        if (delta > THRESHOLD) {
-            canTriggerKipp = false;
-            handleKipp(true);   // Nach unten (Boden): grün, Punkt
-        } else if (delta < -THRESHOLD) {
-            canTriggerKipp = false;
-            handleKipp(false);  // Nach oben (Decke): rot, kein Punkt
-        }
+    // Deutlich nach unten (Boden) gekippt
+    if (delta > THRESHOLD) {
+        canTriggerKipp = false;
+        gameSection.style.background = '#46e646'; // grün
+        handleKipp(true);
+        setTimeout(() => { gameSection.style.background = ''; }, 350);
+    }
+    // Deutlich nach oben (Decke) gekippt
+    else if (delta < -THRESHOLD) {
+        canTriggerKipp = false;
+        gameSection.style.background = '#f06060'; // rot
+        handleKipp(false);
+        setTimeout(() => { gameSection.style.background = ''; }, 350);
     }
 }, true);
 
@@ -300,12 +309,8 @@ function handleKipp(correct) {
     isGameRunning = false;
     if (correct) {
         scores[playerIndex] = (Number.isFinite(scores[playerIndex]) ? scores[playerIndex] : 0) + 1;
-        gameSection.classList.add('game-correct');
-    } else {
-        gameSection.classList.add('game-wrong');
     }
     setTimeout(() => {
-        gameSection.classList.remove('game-correct', 'game-wrong');
         wordIndex++;
         showWord();
         isGameRunning = true;
@@ -315,7 +320,7 @@ function handleKipp(correct) {
 
 // =================== RUNDE & SPIELENDE / AUSWERTUNG ===================
 function nextPlayerOrEnd() {
-    gameSection.classList.remove('game-correct', 'game-wrong');
+    gameSection.style.background = '';
     document.getElementById('word-display').style.display = "none";
     document.getElementById('timer-display').textContent = "";
 
