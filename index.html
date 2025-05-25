@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stirnraten</title>
+   <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- =================== SETUP-BEREICH (Spielstart) =================== -->
+    <!-- Hier werden alle Optionen zum Spielstart eingegeben -->
+    <div id="setup-section">
+        <!-- Hauptüberschrift -->
+        <h1>Stirnraten</h1>
+        
+        <!-- Spieleranzahl auswählen -->
+        <label for="player-count">Wie viele Spieler?</label>
+        <input type="number" id="player-count" min="1" max="8" value="2">
+
+        <!-- Namensfelder (werden dynamisch durch JS eingefügt) -->
+        <div id="player-names">
+            <!-- Platz für die Eingabefelder der Spielernamen -->
+        </div>
+
+        <!-- Runden pro Spieler -->
+        <label for="rounds-per-player">Wie oft soll jeder spielen?</label>
+        <input type="number" id="rounds-per-player" min="1" max="10" value="2">
+
+        <!-- Zeit pro Runde -->
+        <label for="round-time">Zeit pro Runde (Sekunden)</label>
+        <select id="round-time">
+            <option value="30">30</option>
+            <option value="45">45</option>
+            <option value="60" selected>60</option>
+            <option value="90">90</option>
+        </select>
+
+        <!-- Kategorien-Auswahl (Checkboxen) -->
+        <fieldset id="category-select">
+            <legend>Kategorien auswählen</legend>
+            <label><input type="checkbox" value="objekte" checked> Objekte</label>
+            <label><input type="checkbox" value="berufe"> Berufe</label>
+            <label><input type="checkbox" value="natur"> Natur</label>
+            <label><input type="checkbox" value="adjektive"> Adjektive</label>
+            <label><input type="checkbox" value="verben"> Verben</label>
+            <!-- Weitere Kategorien einfach hier ergänzen -->
+        </fieldset>
+        
+        <!-- Spiel starten Button -->
+        <button id="start-game-btn">Spiel starten</button>
+    </div>
+
+    <!-- =================== SPIEL-BEREICH (Runde läuft) =================== -->
+    <!-- Hier läuft die eigentliche Runde -->
+    <div id="game-section" style="display:none;">
+        <!-- Aktueller Spieler und Runde -->
+        <div id="current-player-display"></div>
+
+        <!-- OK-Button für Start der Runde -->
+        <button id="ready-btn">OK</button>
+
+        <!-- Countdown vor Rundenstart -->
+        <div id="countdown" style="display:none;"></div>
+
+        <!-- Das anzuzeigende Wort -->
+        <div id="word-display" style="display:none;"></div>
+
+        <!-- Punktestand des aktuellen Spielers -->
+        <div id="score-display"></div>
+
+        <!-- Restzeit der Runde -->
+        <div id="timer-display"></div>
+    </div>
+
+    <!-- =================== AUSWERTUNGS-BEREICH (Spielende) =================== -->
+    <!-- Nach allen Runden: Ergebnisse und Neustart -->
+    <div id="results-section" style="display:none;">
+        <h2>Spiel beendet!</h2>
+        <div id="results-table"></div>
+        <button id="restart-btn">Nochmal spielen</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
