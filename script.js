@@ -62,7 +62,7 @@ let wordsCurrentRound = [];
 let remainingTime = 0;
 let scores = [];
 let isGameRunning = false;
-let neutralBeta = null; // Für echte Kipp-Ausgangsposition
+let neutralGamma = null; // Für echte Kipp-Ausgangsposition im Querformat
 let canTriggerKipp = true; // Für "Debounce", damit kein Doppelkipp
 let motionPermissionGranted = false;
 
@@ -213,13 +213,7 @@ function reallyStartRound() {
 
 // =================== RUNDE BEGINNT, TIMER LÄUFT ===================
 function beginGameplay() {
-    // Exakte Neutralstellung beim Start der Runde setzen
-    neutralBeta = null;
-    window.addEventListener('deviceorientation', function setNeutral(event) {
-        neutralBeta = event.beta;
-        window.removeEventListener('deviceorientation', setNeutral, true);
-    }, true);
-
+    setNeutralGamma(); // Exakte Neutralstellung für diese Runde setzen!
     canTriggerKipp = true;
 
     if (!gameData || !gameData.roundTime) {
@@ -241,6 +235,15 @@ function beginGameplay() {
             setTimeout(nextPlayerOrEnd, 900);
         }
     }, 1000);
+}
+
+// ========== NEUTRALSTELLUNG (GAMMA) SPEICHERN (bei Wortstart) ==========
+function setNeutralGamma() {
+    neutralGamma = null;
+    window.addEventListener('deviceorientation', function once(event) {
+        neutralGamma = event.gamma;
+        window.removeEventListener('deviceorientation', once, true);
+    }, true);
 }
 
 // =================== AKTUELLES WORT ANZEIGEN ===================
@@ -267,29 +270,32 @@ function updateTimerDisplay() {
     document.getElementById('timer-display').textContent = `Verbleibende Zeit: ${remainingTime}s`;
 }
 
-// =================== KIPPSTEUERUNG (DEVICE ORIENTATION) ===================
+// =================== KIPPSTEUERUNG (DEVICE ORIENTATION, GAMMA!) ===================
 const THRESHOLD = 55;      // Empfohlen: 55° (testen!)
 const NEUTRAL_RANGE = 20;  // Bereich für Neutralzone
 
 window.addEventListener('deviceorientation', function(event) {
-    if (!isGameRunning || neutralBeta === null) return;
-    let delta = event.beta - neutralBeta;
+    if (!isGameRunning || neutralGamma === null) return;
+    let delta = event.gamma - neutralGamma;
 
-    // Wenn Gerät wieder in Neutralzone, Freigabe für nächstes Kippen
+    // Nur auslösen, wenn zurück in Neutralzone (Debounce)
     if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
         canTriggerKipp = true;
         return;
     }
 
-    // NUR wenn noch nicht ausgelöst
     if (canTriggerKipp) {
+        // NACH UNTEN KIPPEN (Boden): Gamma wird deutlich POSITIV
         if (delta > THRESHOLD) {
-            handleKipp(true);   // "Nach vorne" = Boden = richtig
-            canTriggerKipp = false;
-        } else if (delta < -THRESHOLD) {
-            handleKipp(false);  // "Nach hinten" = Decke = falsch
+            handleKipp(true);  // Grün, Punkt, Wort weiter
             canTriggerKipp = false;
         }
+        // NACH OBEN KIPPEN (Decke): Gamma wird deutlich NEGATIV
+        else if (delta < -THRESHOLD) {
+            handleKipp(false); // Rot, kein Punkt, Wort weiter
+            canTriggerKipp = false;
+        }
+        // Seitliche/neutrale Kippung: nichts tun
     }
 }, true);
 
