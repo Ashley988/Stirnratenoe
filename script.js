@@ -66,8 +66,8 @@ let isGameRunning = false;
 // === NUR BETA (iPhone), Debounce etc. ===
 let neutralBeta = null;
 let canTriggerKipp = true;
-const THRESHOLD = 80;      // Wie stark man kippen muss (Boden/Decke)
-const NEUTRAL_RANGE = 40;  // Wie tolerant ist die Neutralzone
+const THRESHOLD = 100;      // Wie stark man kippen muss (Boden/Decke)
+const NEUTRAL_RANGE = 70;  // Wie tolerant ist die Neutralzone
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
