@@ -62,9 +62,21 @@ let wordsCurrentRound = [];
 let remainingTime = 0;
 let scores = [];
 let isGameRunning = false;
-let neutralGamma = null; // Für echte Kipp-Ausgangsposition im Querformat
-let canTriggerKipp = true; // Für "Debounce", damit kein Doppelkipp
+let neutralGamma = null; // Für Kipp-Ausgangsposition im Querformat
+let canTriggerKipp = true; // Für Debounce, damit kein Doppelkipp
+let landscapeSign = 1; // Für Landscape-Richtungs-Erkennung
 let motionPermissionGranted = false;
+
+// =================== LANDSCAPE-RICHTUNG ERKENNEN ===================
+function detectLandscapeSign() {
+    if (window.orientation === 90) {
+        landscapeSign = 1;   // Landscape-Left
+    } else if (window.orientation === -90) {
+        landscapeSign = -1;  // Landscape-Right
+    } else {
+        landscapeSign = 1;   // Fallback
+    }
+}
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
@@ -140,7 +152,6 @@ function showOrientationHintAndThen(callback) {
     orientationHint.style.display = "flex";
     let permissionOk = false;
 
-    // Button-Handler: iOS-User muss explizit klicken
     const enableBtn = document.getElementById('enable-motion-btn');
     if (enableBtn) {
         enableBtn.disabled = false;
@@ -213,7 +224,7 @@ function reallyStartRound() {
 
 // =================== RUNDE BEGINNT, TIMER LÄUFT ===================
 function beginGameplay() {
-    setNeutralGamma(); // Exakte Neutralstellung für diese Runde setzen!
+    setNeutralGamma(); // Neutralstellung exakt bei Rundenstart setzen!
     canTriggerKipp = true;
 
     if (!gameData || !gameData.roundTime) {
@@ -237,9 +248,10 @@ function beginGameplay() {
     }, 1000);
 }
 
-// ========== NEUTRALSTELLUNG (GAMMA) SPEICHERN (bei Wortstart) ==========
+// ========== NEUTRALSTELLUNG (GAMMA) SPEICHERN (bei Wortstart) + LandscapeSign setzen ==========
 function setNeutralGamma() {
     neutralGamma = null;
+    detectLandscapeSign();
     window.addEventListener('deviceorientation', function once(event) {
         neutralGamma = event.gamma;
         window.removeEventListener('deviceorientation', once, true);
@@ -262,7 +274,7 @@ function showWord() {
     document.getElementById('word-display').style.display = "block";
     const punkte = Number.isFinite(scores[playerIndex]) ? scores[playerIndex] : 0;
     document.getElementById('score-display').textContent = `Punkte: ${punkte}`;
-    canTriggerKipp = true; // Nach jedem neuen Wort wieder erlauben
+    canTriggerKipp = true;
 }
 
 // =================== TIMER ANZEIGEN ===================
@@ -271,31 +283,29 @@ function updateTimerDisplay() {
 }
 
 // =================== KIPPSTEUERUNG (DEVICE ORIENTATION, GAMMA!) ===================
-const THRESHOLD = 55;      // Empfohlen: 55° (testen!)
-const NEUTRAL_RANGE = 20;  // Bereich für Neutralzone
+const THRESHOLD = 55;
+const NEUTRAL_RANGE = 20;
 
 window.addEventListener('deviceorientation', function(event) {
     if (!isGameRunning || neutralGamma === null) return;
-    let delta = event.gamma - neutralGamma;
 
-    // Nur auslösen, wenn zurück in Neutralzone (Debounce)
+    let delta = (event.gamma - neutralGamma) * landscapeSign;
+
+    // In Neutralzone: Debounce zurücksetzen
     if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
         canTriggerKipp = true;
         return;
     }
 
+    // ECHTES Debounce: Nur 1 Wort pro Kipp, egal wie lange gekippt!
     if (canTriggerKipp) {
-        // NACH UNTEN KIPPEN (Boden): Gamma wird deutlich POSITIV
         if (delta > THRESHOLD) {
-            handleKipp(true);  // Grün, Punkt, Wort weiter
             canTriggerKipp = false;
-        }
-        // NACH OBEN KIPPEN (Decke): Gamma wird deutlich NEGATIV
-        else if (delta < -THRESHOLD) {
-            handleKipp(false); // Rot, kein Punkt, Wort weiter
+            handleKipp(true);  // Nach unten (Boden): grün, Punkt
+        } else if (delta < -THRESHOLD) {
             canTriggerKipp = false;
+            handleKipp(false); // Nach oben (Decke): rot, kein Punkt
         }
-        // Seitliche/neutrale Kippung: nichts tun
     }
 }, true);
 
@@ -314,7 +324,7 @@ function handleKipp(correct) {
         wordIndex++;
         showWord();
         isGameRunning = true;
-        canTriggerKipp = true; // Nach jedem neuen Wort wieder erlauben
+        canTriggerKipp = true;
     }, 400);
 }
 
