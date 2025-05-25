@@ -63,13 +63,11 @@ let remainingTime = 0;
 let scores = [];
 let isGameRunning = false;
 
-// === NEU: Für universelle Kippfunktion ===
+// === NUR BETA (iPhone), Debounce etc. ===
 let neutralBeta = null;
-let neutralGamma = null;
-let activeAxis = "beta"; // "beta" oder "gamma", wird automatisch erkannt
 let canTriggerKipp = true;
-const THRESHOLD = 55;
-const NEUTRAL_RANGE = 20;
+const THRESHOLD = 55;      // Wie stark man kippen muss (Boden/Decke)
+const NEUTRAL_RANGE = 20;  // Wie tolerant ist die Neutralzone
 
 // =================== SPIELSTART: SETUP EINSAMMELN & STARTEN ===================
 startBtn.addEventListener('click', function () {
@@ -217,7 +215,7 @@ function reallyStartRound() {
 
 // =================== RUNDE BEGINNT, TIMER LÄUFT ===================
 function beginGameplay() {
-    setNeutralAxis(); // Universell, erkennt die richtige Achse
+    setNeutralBeta(); // <<< WICHTIG: Neutralstellung JETZT setzen!
     canTriggerKipp = true;
 
     if (!gameData || !gameData.roundTime) {
@@ -241,12 +239,10 @@ function beginGameplay() {
     }, 1000);
 }
 
-// ===== Universelle Kipp-Neutralstellung setzen =====
-function setNeutralAxis() {
+// ==== Neutralpunkt für iPhone/iPad: beta-Achse ====
+function setNeutralBeta() {
     window.addEventListener('deviceorientation', function once(event) {
         neutralBeta = event.beta;
-        neutralGamma = event.gamma;
-        activeAxis = "beta"; // Standard, automatische Erkennung folgt im Listener
         canTriggerKipp = true;
         window.removeEventListener('deviceorientation', once, true);
     }, true);
@@ -276,22 +272,12 @@ function updateTimerDisplay() {
     document.getElementById('timer-display').textContent = `Verbleibende Zeit: ${remainingTime}s`;
 }
 
-// =================== KIPPSTEUERUNG (UNIVERSAL!) ===================
+// =================== KIPPSTEUERUNG (NUR BETA!) ===================
 window.addEventListener('deviceorientation', function(event) {
-    if (!isGameRunning || neutralBeta === null || neutralGamma === null) return;
+    if (!isGameRunning || neutralBeta === null) return;
+    let delta = event.beta - neutralBeta;
 
-    let deltaBeta = event.beta - neutralBeta;
-    let deltaGamma = event.gamma - neutralGamma;
-
-    // Achse wählen, die sich beim Kippen am meisten verändert!
-    if (Math.abs(deltaBeta) > Math.abs(deltaGamma)) {
-        activeAxis = "beta";
-    } else {
-        activeAxis = "gamma";
-    }
-    let delta = (activeAxis === "beta") ? deltaBeta : deltaGamma;
-
-    // Debounce: Nur wenn wirklich wieder neutral gehalten
+    // Debounce: Nur wenn wieder zurück in die Neutralzone
     if (delta > -NEUTRAL_RANGE && delta < NEUTRAL_RANGE) {
         canTriggerKipp = true;
         return;
